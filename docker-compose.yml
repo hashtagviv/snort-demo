@@ -1,0 +1,36 @@
+version: '3'
+services:
+  snort_victim:
+    image: ubuntu:20.04
+    container_name: snort_victim
+    networks:
+      snort_demo_network:
+        aliases:
+          - snort_victim
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=Europe/London
+    volumes:
+      - ./snort3_config/db:/var/www/html/db # For serving files and storing the DB
+    ports:
+      - "8080:80" # Exposing Apache on port 8080
+    command: [ "/bin/bash", "-c", "dpkg --configure -a && apt-get update && apt-get install -y snort apache2 sqlite3 libsqlite3-dev tzdata && echo 'ServerName localhost' >> /etc/apache2/apache2.conf && sqlite3 /var/www/html/db/test.db < /var/www/html/db/setup.sql && service apache2 start && /bin/bash" ]
+    stdin_open: true
+    tty: true
+
+  attacker:
+    image: ubuntu:20.04
+    container_name: attacker
+    networks:
+      - snort_demo_network
+    stdin_open: true
+    tty: true
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - TZ=Europe/London
+      - RUNLEVEL=1
+  command: [ "/bin/bash", "-c", "dpkg --configure -a && apt-get update && apt-get install -y nmap curl wget apache2-utils iputils-ping openssh-server && /bin/bash" ]
+
+networks:
+  snort_demo_network:
+    driver: bridge
